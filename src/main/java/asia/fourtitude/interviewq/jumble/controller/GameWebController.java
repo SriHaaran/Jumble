@@ -1,5 +1,6 @@
 package asia.fourtitude.interviewq.jumble.controller;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,12 +18,16 @@ import asia.fourtitude.interviewq.jumble.core.GameState;
 import asia.fourtitude.interviewq.jumble.core.JumbleEngine;
 import asia.fourtitude.interviewq.jumble.model.GameBoard;
 
+import java.util.List;
+
 @Controller
 @RequestMapping(path = "/game")
 @SessionAttributes("board")
 public class GameWebController {
 
     private static final Logger LOG = LoggerFactory.getLogger(GameWebController.class);
+    public static final int MIN_NO_OF_LETTERS = 3;
+    public static final String VIEW_BOARD = "game/board";
 
     private final JumbleEngine jumbleEngine;
 
@@ -55,7 +60,7 @@ public class GameWebController {
     @GetMapping(path = "/goodbye")
     public String goodbye(SessionStatus status) {
         status.setComplete();
-        return "game/board";
+        return VIEW_BOARD;
     }
 
     @GetMapping("/help")
@@ -67,46 +72,77 @@ public class GameWebController {
     public String doGetNew(@ModelAttribute(name = "board") GameBoard board) {
         GameState state = this.jumbleEngine.createGameState(6, 3);
 
-        /*
-         * TODO:
-         * a) Assign the created game `state` (with randomly picked word) into
-         *        game `board` (session attribute)
-         * b) Presentation page to show the information of game board/state
-         * c) Must pass the corresponding unit tests
-         */
+        board.setState(state);
+        board.setWord(StringUtils.EMPTY);
 
-        return "game/board";
+        return VIEW_BOARD;
     }
 
     @GetMapping("/play")
     public String doGetPlay(@ModelAttribute(name = "board") GameBoard board) {
         scrambleWord(board);
 
-        return "game/board";
+        return VIEW_BOARD;
     }
 
     @PostMapping("/play")
     public String doPostPlay(
             @ModelAttribute(name = "board") GameBoard board,
             BindingResult bindingResult, Model model) {
-        if (board == null || board.getState() == null) {
-            // session expired
-            return "game/board";
+
+        if (isSessionExpired(board)) {
+            LOG.warn("Session expired or board state missing.");
+            return VIEW_BOARD;
         }
 
         scrambleWord(board);
 
-        /*
-         * TODO:
-         * a) Validate the input `word`
-         * b) From the input guessing `word`, implement the game logic
-         * c) Update the game `board` (session attribute)
-         * d) Show the error: "Guessed incorrectly", when word is guessed incorrectly.
-         * e) Presentation page to show the information of game board/state
-         * f) Must pass the corresponding unit tests
-         */
+        String word = sanitizeInput(board.getWord());
+        LOG.debug("Player guessed word: {}", word);
 
-        return "game/board";
+        if (isInvalidLength(word, bindingResult)) return VIEW_BOARD;
+
+        GameState state = board.getState();
+        if (isRepeatedGuess(state, word, bindingResult)) return VIEW_BOARD;
+
+        if (!state.updateGuessWord(word)) {
+            bindingResult.rejectValue("word", "error.word", "Guessed incorrectly");
+            return VIEW_BOARD;
+        }
+
+        if (isGameComplete(state)) {
+            LOG.info("Player guessed all words.");
+        }
+
+        return VIEW_BOARD;
+    }
+
+    private static boolean isSessionExpired(GameBoard board) {
+        return board == null || board.getState() == null;
+    }
+
+    private String sanitizeInput(String word) {
+        return word == null ? "" : word.trim().toLowerCase();
+    }
+
+    private boolean isInvalidLength(String word, BindingResult bindingResult) {
+        if (word.length() < MIN_NO_OF_LETTERS) {
+            bindingResult.rejectValue("word", "error.word", "Must be at least 3 characters.");
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isRepeatedGuess(GameState state, String word, BindingResult bindingResult) {
+        if (state.getGuessedWords().contains(word)) {
+            bindingResult.rejectValue("word", "error.word", "You already guessed this word.");
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isGameComplete(GameState state) {
+        return state.getSubWords().size() == state.getGuessedWords().size();
     }
 
 }

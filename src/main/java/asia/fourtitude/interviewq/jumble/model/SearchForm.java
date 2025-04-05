@@ -1,13 +1,20 @@
 package asia.fourtitude.interviewq.jumble.model;
 
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Pattern;
+import javax.validation.constraints.Size;
 import java.util.Collection;
 
 public class SearchForm {
 
+    @Size(max = 1, message = "size must be between 0 and 1")
     private String startChar;
 
+    @Size(max = 1, message = "size must be between 0 and 1")
     private String endChar;
 
+    @Min(value = 1, message = "Invalid length")
     private Integer length;
 
     private Collection<String> words;

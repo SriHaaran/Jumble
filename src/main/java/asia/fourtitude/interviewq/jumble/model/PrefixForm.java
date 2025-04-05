@@ -1,9 +1,11 @@
 package asia.fourtitude.interviewq.jumble.model;
 
+import javax.validation.constraints.NotBlank;
 import java.util.Collection;
 
 public class PrefixForm {
 
+    @NotBlank(message = "must not be blank")
     private String prefix;
 
     private Collection<String> words;
