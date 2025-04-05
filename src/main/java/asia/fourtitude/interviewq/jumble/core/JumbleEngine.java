@@ -1,9 +1,41 @@
 package asia.fourtitude.interviewq.jumble.core;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class JumbleEngine {
+    public static final String WORD_FILE_PATH = "words.txt";
+    private static final Logger log = LoggerFactory.getLogger(JumbleEngine.class);
+    private final Set<String> wordSet;
+
+    public JumbleEngine() {
+        this.wordSet = loadWordListFromFile();
+    }
+
+    private Set<String> loadWordListFromFile() {
+        Set<String> words = new HashSet<>();
+        try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(WORD_FILE_PATH)) {
+            if (inputStream == null) throw new FileNotFoundException("File not found: " + WORD_FILE_PATH);
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+
+            reader.lines()
+                    .map(String::trim)
+                    .filter(line -> !line.isEmpty())
+                    .map(String::toLowerCase)
+                    .forEach(words::add);
+
+        } catch (IOException e) {
+            log.error("Error reading the word file: {}", e.getMessage(), e);
+            throw new UncheckedIOException("Error reading the word file at " + WORD_FILE_PATH + ": " + e.getMessage(), e);
+        }
+        return words;
+    }
+
 
     /**
      * From the input `word`, produces/generates a copy which has the same
@@ -19,11 +51,19 @@ public class JumbleEngine {
      * @return  The scrambled output/letters.
      */
     public String scramble(String word) {
-        /*
-         * Refer to the method's Javadoc (above) and implement accordingly.
-         * Must pass the corresponding unit tests.
-         */
-        throw new UnsupportedOperationException("to be implemented");
+        if (word == null || word.length() < 2) return word;
+
+        List<Character> characters = word.chars().mapToObj(c -> (char) c).collect(Collectors.toList());
+
+        String scrambled;
+        do {
+            Collections.shuffle(characters);
+            scrambled = characters.stream()
+                    .map(String::valueOf)
+                    .collect(Collectors.joining());
+        } while (scrambled.equals(word));
+
+        return scrambled;
     }
 
     /**
@@ -40,15 +80,25 @@ public class JumbleEngine {
      * c) using "try-with-resources" functionality/statement
      * d) pass unit test: JumbleEngineTest#palindrome()
      *
-     * @return  The list of palindrome words found in system/engine.
-     * @see https://www.google.com/search?q=palindrome+meaning
+     * @return The list of palindrome words found in system/engine.
+     * @see <a href="https://www.google.com/search?q=palindrome+meaning">Palindrome Meaning</a>
      */
     public Collection<String> retrievePalindromeWords() {
-        /*
-         * Refer to the method's Javadoc (above) and implement accordingly.
-         * Must pass the corresponding unit tests.
-         */
-        throw new UnsupportedOperationException("to be implemented");
+        return wordSet.stream()
+                .filter(word -> word.length() > 1 && isPalindrome(word))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Checks if a given word is a palindrome.
+     * Ignores case sensitivity.
+     *
+     * @param word The word to check.
+     * @return true if the word is a palindrome, false otherwise.
+     */
+    private boolean isPalindrome(String word) {
+        String normalizedWord = word.toLowerCase();
+        return normalizedWord.contentEquals(new StringBuilder(normalizedWord).reverse());
     }
 
     /**
@@ -65,12 +115,21 @@ public class JumbleEngine {
      *          Or null if none matching.
      */
     public String pickOneRandomWord(Integer length) {
-        /*
-         * Refer to the method's Javadoc (above) and implement accordingly.
-         * Must pass the corresponding unit tests.
-         */
-        throw new UnsupportedOperationException("to be implemented");
+        List<String> wordsToChooseFrom = length == null ? new ArrayList<>(wordSet) : filterWordsByLength(length);
+        return wordsToChooseFrom.isEmpty() ? null : pickRandomWord(wordsToChooseFrom);
     }
+
+    private List<String> filterWordsByLength(int length) {
+        return wordSet.stream()
+                .filter(word -> word.length() == length)
+                .collect(Collectors.toList());
+    }
+
+    private String pickRandomWord(List<String> words) {
+        Random random = new Random();
+        return words.get(random.nextInt(words.size()));
+    }
+
 
     /**
      * Checks if the `word` exists in internal word list.
@@ -85,11 +144,11 @@ public class JumbleEngine {
      * @return  true if `word` exists in internal word list.
      */
     public boolean exists(String word) {
-        /*
-         * Refer to the method's Javadoc (above) and implement accordingly.
-         * Must pass the corresponding unit tests.
-         */
-        throw new UnsupportedOperationException("to be implemented");
+        if (word == null || word.trim().isEmpty()) {
+            return false;
+        }
+
+        return wordSet.contains(word.trim().toLowerCase());
     }
 
     /**
@@ -109,11 +168,17 @@ public class JumbleEngine {
      * @return  The list of words matching the prefix.
      */
     public Collection<String> wordsMatchingPrefix(String prefix) {
-        /*
-         * Refer to the method's Javadoc (above) and implement accordingly.
-         * Must pass the corresponding unit tests.
-         */
-        throw new UnsupportedOperationException("to be implemented");
+        if (isInvalidPrefix(prefix)) {
+            return Collections.emptyList();
+        }
+
+        return wordSet.stream()
+                .filter(word -> word.startsWith(prefix.toLowerCase()))
+                .collect(Collectors.toList());
+    }
+
+    private boolean isInvalidPrefix(String prefix) {
+        return prefix == null || prefix.trim().isEmpty() || !prefix.matches("[a-zA-Z]+");
     }
 
     /**
@@ -141,11 +206,39 @@ public class JumbleEngine {
      * @return  The list of words matching the searching criteria.
      */
     public Collection<String> searchWords(Character startChar, Character endChar, Integer length) {
-        /*
-         * Refer to the method's Javadoc (above) and implement accordingly.
-         * Must pass the corresponding unit tests.
-         */
-        throw new UnsupportedOperationException("to be implemented");
+        if (areAllFiltersInvalid(startChar, endChar, length)) {
+            return Collections.emptyList();
+        }
+
+        return wordSet.stream()
+                .filter(word -> matchesStartChar(word, startChar))
+                .filter(word -> matchesEndChar(word, endChar))
+                .filter(word -> matchesLength(word, length))
+                .collect(Collectors.toList());
+    }
+
+    private boolean areAllFiltersInvalid(Character startChar, Character endChar, Integer length) {
+        return isInvalidChar(startChar) && isInvalidChar(endChar) && isInvalidLength(length);
+    }
+
+    private boolean isInvalidChar(Character c) {
+        return c == null || !Character.isLetter(c);
+    }
+
+    private boolean isInvalidLength(Integer length) {
+        return length == null || length < 1;
+    }
+
+    private boolean matchesStartChar(String word, Character startChar) {
+        return isInvalidChar(startChar) || word.startsWith(String.valueOf(startChar).toLowerCase());
+    }
+
+    private boolean matchesEndChar(String word, Character endChar) {
+        return isInvalidChar(endChar) || word.endsWith(String.valueOf(endChar).toLowerCase());
+    }
+
+    private boolean matchesLength(String word, Integer length) {
+        return isInvalidLength(length) || word.length() == length;
     }
 
     /**
@@ -174,11 +267,54 @@ public class JumbleEngine {
      * @return  The list of sub words constructed from input `word`.
      */
     public Collection<String> generateSubWords(String word, Integer minLength) {
-        /*
-         * Refer to the method's Javadoc (above) and implement accordingly.
-         * Must pass the corresponding unit tests.
-         */
-        throw new UnsupportedOperationException("to be implemented");
+        final int DEFAULT_MIN_LENGTH = 3;
+        int minLen = minLength == null ? DEFAULT_MIN_LENGTH : minLength;
+
+        if (!isValidWord(word) || minLen < 1 || word.length() < minLen) {
+            return Collections.emptyList();
+        }
+
+        word = word.toLowerCase();
+        Set<String> result = new HashSet<>();
+        char[] letters = word.toCharArray();
+        Arrays.sort(letters); // Sorting helps handle duplicates better
+
+        // Generate all permutations from length = minLen to word.length()
+        for (int len = minLen; len <= letters.length; len++) {
+            generatePermutations(letters, new boolean[letters.length], new StringBuilder(), len, result);
+        }
+
+        result.remove(word); // remove the original word
+        return result.stream()
+                .filter(wordSet::contains)
+                .collect(Collectors.toSet());
+    }
+
+    /**
+     * Helper method to generate all unique permutations of a given length.
+     */
+    private void generatePermutations(char[] letters, boolean[] used, StringBuilder current, int targetLength, Set<String> result) {
+        if (current.length() == targetLength) {
+            result.add(current.toString());
+            return;
+        }
+
+        for (int i = 0; i < letters.length; i++) {
+            if (used[i]) continue;
+
+            // Skip duplicates: if current char == previous and previous not used
+            if (i > 0 && letters[i] == letters[i - 1] && !used[i - 1]) continue;
+
+            used[i] = true;
+            current.append(letters[i]);
+            generatePermutations(letters, used, current, targetLength, result);
+            current.deleteCharAt(current.length() - 1);
+            used[i] = false;
+        }
+    }
+
+    private boolean isValidWord(String word) {
+        return word != null && !word.trim().isEmpty() && word.matches("[a-zA-Z]+");
     }
 
     /**

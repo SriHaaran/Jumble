@@ -66,7 +66,7 @@ public class GuessWord extends AConsole {
                     finish = true;
                     break;
                 default:
-                    String word = option.trim();
+                    String word = option.trim().toLowerCase();
                     cout.println();
                     if (gameState.updateGuessWord(word)) {
                         cout.printf("[%s] guessed correctly%n", word);
