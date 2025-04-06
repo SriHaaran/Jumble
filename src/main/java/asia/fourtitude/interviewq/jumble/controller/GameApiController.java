@@ -1,25 +1,10 @@
 package asia.fourtitude.interviewq.jumble.controller;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import asia.fourtitude.interviewq.jumble.core.GameState;
-import asia.fourtitude.interviewq.jumble.core.JumbleEngine;
+import asia.fourtitude.interviewq.jumble.exception.GameNotFoundException;
 import asia.fourtitude.interviewq.jumble.model.GameGuessInput;
-import asia.fourtitude.interviewq.jumble.model.GameGuessModel;
 import asia.fourtitude.interviewq.jumble.model.GameGuessOutput;
+import asia.fourtitude.interviewq.jumble.service.GameService;
+import asia.fourtitude.interviewq.jumble.service.impl.GameServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -28,6 +13,13 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @Tag(name = "Game API", description = "Guessing words game REST API endpoint.")
@@ -36,18 +28,8 @@ public class GameApiController {
 
     private static final Logger LOG = LoggerFactory.getLogger(GameApiController.class);
 
-    private final JumbleEngine jumbleEngine;
-
-    /*
-     * In-memory database/repository for all the game boards/states.
-     */
-    private final Map<String, GameGuessModel> gameBoards;
-
-    @Autowired(required = true)
-    public GameApiController(JumbleEngine jumbleEngine) {
-        this.jumbleEngine = jumbleEngine;
-        this.gameBoards = new ConcurrentHashMap<>();
-    }
+    @Autowired
+    private GameService gameService;
 
     @Operation(
             summary = "Creates new game board/state",
@@ -72,24 +54,10 @@ public class GameApiController {
                                                             "  \"total_words\": 29,\n" +
                                                             "  \"remaining_words\": 29,\n" +
                                                             "  \"guessed_words\": []\n" +
-                                                            "}") })) })
+                                                            "}")}))})
     @GetMapping(value = "/new", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<GameGuessOutput> newGame() {
-        /*
-         * Refer to the method's Javadoc (above) and implement accordingly.
-         * Must pass the corresponding unit tests.
-         */
-        GameGuessOutput output = new GameGuessOutput();
-
-        GameState gameState = this.jumbleEngine.createGameState(6, 3);
-
-        /*
-         * TODO:
-         * a) Store the game state to the repository, with unique game board ID
-         * b) Return the game board/state (GameGuessOutput) to caller
-         */
-
-        return new ResponseEntity<>(output, HttpStatus.OK);
+        return ResponseEntity.ok(gameService.createNewGame());
     }
 
     @Operation(
@@ -176,7 +144,7 @@ public class GameApiController {
                                                             "    \"loom\",\n" +
                                                             "    \"gloom\"\n" +
                                                             "  ]\n" +
-                                                            "}") })),
+                                                            "}")})),
                     @ApiResponse(
                             responseCode = "404",
                             description = "Not Found",
@@ -195,7 +163,7 @@ public class GameApiController {
                                                     description = "The `ID` is correct format, but game board/state is not found in system.",
                                                     value = "{\n" +
                                                             "  \"result\": \"Game board/state not found.\"\n" +
-                                                            "}") })) })
+                                                            "}")}))})
     @PostMapping(value = "/guess", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<GameGuessOutput> playGame(
             @Parameter(
@@ -207,22 +175,11 @@ public class GameApiController {
                             "  \"word\": \"answer\"\n" +
                             "}")
             @RequestBody GameGuessInput input) {
-        /*
-         * Refer to the method's Javadoc (above) and implement accordingly.
-         * Must pass the corresponding unit tests.
-         */
-        GameGuessOutput output = new GameGuessOutput();
 
-        /*
-         * TODO:
-         * a) Validate the input (GameGuessInput)
-         * b) Check records exists in repository (search by input `id`)
-         * c) From the input guessing `word`, implement the game logic
-         * d) Update the game board (and game state) in repository
-         * e) Return the updated game board/state (GameGuessOutput) to caller
-         */
-
-        return new ResponseEntity<>(output, HttpStatus.OK);
+        try {
+            return ResponseEntity.ok(gameService.processGuess(input));
+        } catch (GameNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getOutput());
+        }
     }
-
 }

@@ -9,8 +9,16 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.media.Schema.RequiredMode;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @JsonInclude(Include.NON_NULL)
+@Builder
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class GameGuessInput {
 
     @Schema(
@@ -33,22 +41,6 @@ public class GameGuessInput {
     @NotBlank
     @Size(min = 3, max = 30)
     private String word;
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getWord() {
-        return word;
-    }
-
-    public void setWord(String word) {
-        this.word = word;
-    }
 
     @Override
     public String toString() {

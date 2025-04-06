@@ -3,7 +3,13 @@ package asia.fourtitude.interviewq.jumble.model;
 import java.util.Date;
 
 import asia.fourtitude.interviewq.jumble.core.GameState;
+import lombok.Builder;
+import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
+@Builder
+@Getter
 public class GameGuessModel {
 
     private String id;
@@ -14,32 +20,16 @@ public class GameGuessModel {
 
     private GameState gameState;
 
-    public String getId() {
-        return id;
-    }
-
     public void setId(String id) {
         this.id = id;
-    }
-
-    public Date getCreatedAt() {
-        return createdAt;
     }
 
     public void setCreatedAt(Date createdAt) {
         this.createdAt = createdAt;
     }
 
-    public Date getModifiedAt() {
-        return modifiedAt;
-    }
-
     public void setModifiedAt(Date modifiedAt) {
         this.modifiedAt = modifiedAt;
-    }
-
-    public GameState getGameState() {
-        return gameState;
     }
 
     public void setGameState(GameState gameState) {

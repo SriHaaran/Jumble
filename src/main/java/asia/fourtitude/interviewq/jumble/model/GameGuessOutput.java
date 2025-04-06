@@ -11,8 +11,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.media.Schema.RequiredMode;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
 
 @JsonInclude(Include.NON_NULL)
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class GameGuessOutput {
 
     @Schema(
